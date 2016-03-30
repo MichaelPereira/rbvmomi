@@ -1,6 +1,7 @@
 require 'open-uri'
 require 'nokogiri'
 require 'rbvmomi'
+require 'os'
 
 # The cached ovf deployer is an optimization on top of regular OVF deployment
 # as it is offered by the VIM::OVFManager. Creating a VM becomes a multi-stage
@@ -105,8 +106,13 @@ class CachedOvfDeployer
 
     # If we're handling a file:// URI we need to strip the scheme as open-uri
     # can't handle them.
-    if URI(ovf_url).scheme == "file" && URI(ovf_url).host.nil?
-      ovf_url = URI(ovf_url).path
+    if URI(ovf_url).scheme == "file"
+      if URI(ovf_url).host.nil?
+        ovf_url = URI(ovf_url).path
+      # Handle Windows case where the root drive letter is the "host"
+      elsif OS.windows?
+        ovf_url = URI(ovf_url).host + ":" + URI(ovf_url).path
+      end
     end
 
     ovf = open(ovf_url, 'r'){|io| Nokogiri::XML(io.read)}
